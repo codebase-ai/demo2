@@ -1,15 +1,36 @@
-# Use an official Python runtime as a base image
-FROM python:3.11-slim
+# -------------------------
+# Stage 1: Build
+# -------------------------
+FROM golang:1.22 AS builder
 
-# Set the working directory inside the container
+# Set the Current Working Directory inside the container
 WORKDIR /app
 
-# Copy dependency file and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy go.mod and go.sum first (for dependency caching)
+COPY go.mod go.sum ./
 
-# Copy the application code
+# Download dependencies
+RUN go mod download
+
+# Copy the source code
 COPY . .
 
-# Run the application
-CMD ["python", "app.py"]
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+
+# -------------------------
+# Stage 2: Run
+# -------------------------
+FROM alpine:3.20
+
+# Set working directory
+WORKDIR /root/
+
+# Copy binary from builder
+COPY --from=builder /app/main .
+
+# Expose application port (change if needed)
+EXPOSE 8080
+
+# Command to run the executable
+CMD ["./main"]
