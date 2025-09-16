@@ -1,36 +1,14 @@
-# -------------------------
-# Stage 1: Build
-# -------------------------
-FROM golang:1.22 AS builder
-
-# Set the Current Working Directory inside the container
-WORKDIR /app
-
-# Copy go.mod and go.sum first (for dependency caching)
-COPY go.mod go.sum ./
-
-# Download dependencies
-RUN go mod download
-
-# Copy the source code
-COPY . .
-
-# Build the Go app
-RUN CGO_ENABLED=0 GOOS=linux go build -o main .
-
-# -------------------------
-# Stage 2: Run
-# -------------------------
-FROM alpine:3.20
+# Use official OpenJDK image as base
+FROM openjdk:17-jdk-slim
 
 # Set working directory
-WORKDIR /root/
+WORKDIR /app
 
-# Copy binary from builder
-COPY --from=builder /app/main .
+# Copy the JAR file into the container
+COPY target/myapp.jar app.jar
 
-# Expose application port (change if needed)
+# Expose port (if your app runs on 8080)
 EXPOSE 8080
 
-# Command to run the executable
-CMD ["./main"]
+# Run the JAR
+ENTRYPOINT ["java", "-jar", "app.jar"]
